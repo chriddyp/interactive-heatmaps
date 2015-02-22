@@ -1,0 +1,210 @@
+<!DOCTYPE HTML>
+<html >
+<head>
+    <script src="//code.jquery.com/jquery-1.10.2.js"></script>
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,300,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.5.0/base-min.css">
+    <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.5.0/pure-min.css">
+</head>
+
+<body style="font-family: 'Open Sans', serif; background: #edf1f8">
+    <div class="pure-g">
+        <div class="pure-u-7-24">
+            <div style="margin: 0 2em 0; text-align: right;">
+                <h1 style="text-transform: uppercase; color: #447bdc;">
+                    Interactive Heatmaps
+                </h1>
+
+                <h2 style="font-weight: 300; color: #1d3b84; opacity: 0.5">
+                    Click on a heatmap cell
+                </h2>
+
+                <form class="pure-form pure-g">
+                    <div class="pure-u-1-5"></div>
+                    <div class="pure-u-4-5">
+                        <input
+                            class="pure-input-1"
+                            placeholder="https://local.plot.ly/~chris/27.embed"
+                            value="https://local.plot.ly/~chris/27.embed">
+                    </div>
+                </form>
+
+                <a class="pure-button"
+                    style="
+                        background: transparent;
+                        border: 2px solid rgb(176, 202, 219);
+                        color: color: #1d3b84;
+                        opacity: 0.5;
+                        margin-top: 1em;
+                        letter-spacing: 0.05em;
+                        text-transform: uppercase;
+                        font-size: 85%;"
+                    id="newGraph" href="#">Refresh</a>
+
+                <div class="pure-u-1">
+                    <div style="font-weight: 300; color: #1d3b84; margin-top: 80%">
+                        This example binds custom interactivity client-side with JavaScript with
+                        <a class="color: #447bdc;" href="https://github.com/plotly/Embed-API">
+                        Plotly's postMessage embed API</a>. Any plotly heatmap or contour plot
+                        will work. View the source to see usage.
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="pure-u-17-24">
+            <iframe id="heatmap"
+                    src="https://local.plot.ly/~chris/27.embed"
+                    style="width:100%; height:600px; border:none"
+                    seamless>
+            </iframe>
+        </div>
+    </div>
+
+    <script type="text/javascript" charset="utf-8">
+
+        function init_graph_obj(id){
+            var obj = {
+                graphContentWindow: $('#'+id)[0].contentWindow,
+                id: id
+            };
+            obj['pinger'] = setInterval(function(){
+                obj.graphContentWindow.postMessage({task: 'ping'}, 'https://local.plot.ly');
+            }, 500);
+            return obj;
+        }
+
+        var graphUrl = $('input').val();
+        $('#graph').attr('src', graphUrl);
+
+        var graphs = {
+            'heatmap': init_graph_obj('heatmap')
+        };
+
+        window.addEventListener('message', function(e){
+            var message = e.data;
+
+            for(graph_id in graphs){
+                if(graphs[graph_id].graphContentWindow === e.source) {
+                    var graph = graphs[graph_id];
+                    break;
+                }
+            }
+
+            var pinger = graph.pinger;
+            var graphContentWindow = graph.graphContentWindow;
+            var id = graph.id;
+
+            if('pong' in message && message.pong) {
+                clearInterval(pinger);
+                if('pong' in graph){
+                    graph.pong();
+                }
+            } else if (message.type==='hover' ||
+                        message.type==='zoom'  ||
+                        message.type==='click') {
+                console.log('>> ', message.type);
+                if(message.type !== 'zoom') {
+                    for(var i in message.points) {
+                        delete message.points[i].data;
+                    }
+                }
+
+                if(message.type in graph) {
+                    graph[message.type](message);
+                }
+
+            } else if(message.task==='getAttributes'){
+                console.log(message);
+                graph['fig'] = message.response;
+            }
+        });
+
+        graphs.heatmap['pong'] = function(message){
+            graphs.heatmap.graphContentWindow.postMessage({'task': 'getAttributes'}, 'https://local.plot.ly');
+            graphs.heatmap.graphContentWindow.postMessage({
+                'task': 'listen',
+                'events': ['click']},
+            'https://local.plot.ly');
+        };
+
+        graphs.heatmap['click'] = function(message){
+            if(!('hasClicked' in graphs.heatmap)){
+                graphs.heatmap.graphContentWindow.postMessage({
+                    'task': 'addTraces',
+                    'traces': [
+                        {'x': [], 'y': [], 'xaxis': 'x', 'yaxis': 'y2'},
+                        {'x': [], 'y': [], 'xaxis': 'x2', 'yaxis': 'y'}
+                    ]
+                }, 'https://local.plot.ly');
+                graphs.heatmap.graphContentWindow.postMessage({
+                    'task': 'relayout',
+                    'update': {
+                        'xaxis.domain': [0, 0.75],
+                        'xaxis2': {
+                            'domain': [0.75, 1],
+                            'anchor': 'y'
+                        },
+                        'yaxis.domain': [0.25, 1],
+                        'yaxis2': {
+                            'domain': [0, 0.25],
+                            'anchor': 'x'
+                        },
+                        'margin.r': 0,
+                        'margin.b': 0
+                    }
+                }, 'https://local.plot.ly');
+                graphs.heatmap.hasClicked = true;
+            }
+            var xi = message.points[0]['pointNumber'][0];
+            var yi = message.points[0]['pointNumber'][1];
+            var trace = graphs.heatmap.fig['data'][0];
+            var z = trace.z;
+            var zAlongX = z[xi];
+            var zAlongY = [];
+            for(var i in z){
+                zAlongY.push(z[i][yi]);
+            }
+            var xs = ('x' in trace ? trace.x : range(zAlongX.length));
+            var ys = ('y' in trace ? trace.y : range(zAlongY.length));
+
+            graphs.heatmap.graphContentWindow.postMessage({
+                'task': 'restyle',
+                'update': {'x': [xs, zAlongY], 'y': [zAlongX, ys]},
+                'indices': [1,2]
+            }, 'https://local.plot.ly');
+
+            /*
+            graphs.heatmap.graphContentWindow.postMessage({
+                'task': 'relayout',
+                'update': {
+                    'yaxis2.title': 'z (y = '+message.points[0]['y']+')',
+                    'xaxis2.title': 'z (x = '+message.points[0]['x']+')',
+                }
+            }, 'https://local.plot.ly')
+            */
+        }
+
+        function range(N){
+            var x = [];
+            for(var i=0; i<N; i++){
+                x.push(i);
+            }
+            return x;
+        }
+        // update();
+        // $('#newGraph').click(update)
+
+
+
+
+
+
+
+
+    </script>
+
+</body>
+
+</html>
