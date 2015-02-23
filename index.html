@@ -132,6 +132,7 @@
                     }, plotlyDomain);
                     window.graphs.heatmap.hasClicked = true;
                 }
+
                 var xi = message.points[0]['pointNumber'][0];
                 var yi = message.points[0]['pointNumber'][1];
                 var trace = window.graphs.heatmap.fig['data'][0];
@@ -182,7 +183,9 @@
                 return;
             }
             $('#heatmap').attr('src', url+'.embed');
-            update();
+            $('#heatmap').load(function(){
+                update();
+            });
         });
 
         function messageListener(e) {
