@@ -29,41 +29,38 @@ function update(){
             'task': 'listen',
             'events': ['click']},
         plotlyDomain);
+        window.graphs.heatmap.graphContentWindow.postMessage({
+            'task': 'addTraces',
+            'traces': [
+                {'x': [], 'y': [], 'xaxis': 'x', 'yaxis': 'y2'},
+                {'x': [], 'y': [], 'xaxis': 'x2', 'yaxis': 'y'}
+            ]
+        }, plotlyDomain);
+        window.graphs.heatmap.graphContentWindow.postMessage({
+            'task': 'relayout',
+            'update': {
+                'xaxis.domain': [0, 0.75],
+                'xaxis2': {
+                    'domain': [0.75, 1],
+                    'anchor': 'y'
+                },
+                'yaxis.domain': [0, 0.75],
+                'yaxis2': {
+                    'domain': [0.75, 1],
+                    'anchor': 'x'
+                },
+                'margin.r': 0,
+                'margin.b': 0,
+                'paper_bgcolor': '#edf1f8',
+                'plot_bgcolor': '#edf1f8',
+                'showlegend': false,
+                'hidesources': true
+            }
+        }, plotlyDomain);
     };
 
     window.graphs.heatmap['click'] = function(message){
         console.log('>> click');
-        if(!('hasClicked' in window.graphs.heatmap)){
-            window.graphs.heatmap.graphContentWindow.postMessage({
-                'task': 'addTraces',
-                'traces': [
-                    {'x': [], 'y': [], 'xaxis': 'x', 'yaxis': 'y2'},
-                    {'x': [], 'y': [], 'xaxis': 'x2', 'yaxis': 'y'}
-                ]
-            }, plotlyDomain);
-            window.graphs.heatmap.graphContentWindow.postMessage({
-                'task': 'relayout',
-                'update': {
-                    'xaxis.domain': [0, 0.75],
-                    'xaxis2': {
-                        'domain': [0.75, 1],
-                        'anchor': 'y'
-                    },
-                    'yaxis.domain': [0, 0.75],
-                    'yaxis2': {
-                        'domain': [0.75, 1],
-                        'anchor': 'x'
-                    },
-                    'margin.r': 0,
-                    'margin.b': 0,
-                    'paper_bgcolor': '#edf1f8',
-                    'plot_bgcolor': '#edf1f8',
-                    'showlegend': false,
-                    'hidesources': true
-                }
-            }, plotlyDomain);
-            window.graphs.heatmap.hasClicked = true;
-        }
 
         var xi = message.points[0]['pointNumber'][0];
         var yi = message.points[0]['pointNumber'][1];
