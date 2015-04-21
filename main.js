@@ -76,6 +76,8 @@ function update(){
         }
         var xs = ('x' in trace ? trace.x : range(zAlongX.length));
         var ys = ('y' in trace ? trace.y : range(zAlongY.length));
+        var xp = message.points[0]['x'];
+        var yp = message.points[0]['y'];
 
         window.graphs.heatmap.graphContentWindow.postMessage({
             'task': 'restyle',
@@ -83,18 +85,38 @@ function update(){
             'indices': [1,2]
         }, plotlyDomain);
 
-
         window.graphs.heatmap.graphContentWindow.postMessage({
             'task': 'relayout',
             'update': {
-                'yaxis2.title': 'z (y = '+message.points[0]['y']+')',
-                'xaxis2.title': 'z (x = '+message.points[0]['x']+')',
+                'yaxis2.title': 'z (y = '+ yp +')',
+                'xaxis2.title': 'z (x = '+ xp +')',
+                shapes: [
+                    shape('x', xp),
+                    shape('y', yp)
+                ]
             }
         }, plotlyDomain)
     };
 
     window.removeEventListener('message', messageListener);
     window.addEventListener('message', messageListener);
+}
+
+function shape(axLetter, datum) {
+    return {
+        type: 'line',
+        xref: axLetter==='x' ? 'x' : 'paper',
+        x0: axLetter==='x' ? datum : 0.0,
+        x1: axLetter==='x' ? datum : 0.78,
+        yref: axLetter==='y' ? 'y' : 'paper',
+        y0: axLetter==='y' ? datum : 0.04,
+        y1: axLetter==='y' ? datum : 0.75,
+        line: {
+            dash: 'dash',
+            width: 4
+        },
+        opacity: 0.5
+    }
 }
 
 function range(N){
